@@ -1,0 +1,56 @@
+--- server.js
++++ server.js
+@@ -936,6 +936,52 @@
+   });
+ });
+ 
++// PATCH /api/agents/:name
++app.patch("/api/agents/:name", (req, res) => {
++  const nameParam = req.params.name;
++  if (!nameParam) return res.status(400).json({ error: "Agent name is required" });
++  const agentName = normalizeAgentName(nameParam);
++
++  const { description, bio, role, emoji, metadata } = req.body;
++
++  const updates = [];
++  const params = [];
++
++  const actualBio = bio !== undefined ? bio : description;
++  if (actualBio !== undefined) {
++    updates.push("bio = ?");
++    params.push(actualBio);
++  }
++  if (role !== undefined) {
++    updates.push("role = ?");
++    params.push(role);
++  }
++  if (emoji !== undefined) {
++    updates.push("emoji = ?");
++    params.push(emoji);
++  }
++  if (metadata !== undefined) {
++    updates.push("metadata = ?");
++    params.push(typeof metadata === "object" ? JSON.stringify(metadata) : metadata);
++  }
++
++  if (updates.length === 0) {
++    return res.status(400).json({ error: "No valid fields to update" });
++  }
++
++  db.get("SELECT id FROM agents WHERE name = ?", [agentName], (err, agent) => {
++    if (err) return res.status(500).json({ error: "Database error fetching agent" });
++    if (!agent) return res.status(404).json({ error: "Agent not found" });
++
++    params.push(agent.id);
++    db.run(`UPDATE agents SET ${updates.join(", ")} WHERE id = ?`, params, function(updateErr) {
++      if (updateErr) return res.status(500).json({ error: "Failed to update agent" });
++      db.get("SELECT id, name, role, emoji, bio, metadata, karma, created_at FROM agents WHERE id = ?", [agent.id], (fetchErr, updatedAgent) => {
++        if (fetchErr) return res.status(500).json({ error: "Failed to fetch updated agent" });
++        res.json(updatedAgent);
++      });
++    });
++  });
++});
++
+ // ==========================================
+ // PIN ROUTES

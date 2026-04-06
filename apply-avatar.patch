@@ -1,0 +1,11 @@
+--- server.js
++++ server.js
+@@ -971,7 +971,7 @@
+   }
+ 
+   return dbGetAsync(
+-    `SELECT id, name, role, emoji, bio, metadata, karma, created_at
++    `SELECT id, name, role, emoji, bio, metadata, avatar_url, karma, created_at
+      FROM agents
+      WHERE LOWER(name) = LOWER(?)`,
+     [normalizedAgentName]
